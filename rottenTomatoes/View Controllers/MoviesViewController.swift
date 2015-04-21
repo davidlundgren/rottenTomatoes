@@ -12,6 +12,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
 
     @IBOutlet weak var tableView: UITableView!
     var movies: [NSDictionary]?
+    var refreshControl: UIRefreshControl!
     
     func loadData() {
         let YourApiKey = "dagqdghwaq3e3mxyrp7kmmj5"
@@ -19,12 +20,21 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         
         let url = NSURL(string: RottenTomatoesURLString)!
         let request = NSURLRequest(URL: url)
+        let alert = UIAlertView(title: "Zomg Error", message: "Could not connect to the interwebs.", delegate: self, cancelButtonTitle: "Dismiss")
+        
+        SVProgressHUD.show()
         NSURLConnection.sendAsynchronousRequest(request, queue: NSOperationQueue.mainQueue()) { (response: NSURLResponse!, data: NSData!, error: NSError!) -> Void in
+            if error != nil {
+                alert.show()
+            }
             let json = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
             if let json = json {
                 self.movies = json["movies"] as! [NSDictionary]
+            } else {
+                alert.show()
             }
             self.tableView.reloadData()
+            SVProgressHUD.dismiss()
         }
         tableView.dataSource = self
         tableView.delegate = self
@@ -59,6 +69,9 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     override func viewDidLoad() {
         super.viewDidLoad()
         self.loadData()
+        refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: "onRefresh", forControlEvents: UIControlEvents.ValueChanged)
+        self.tableView.insertSubview(refreshControl, atIndex: 0)
     }
 
     override func didReceiveMemoryWarning() {
@@ -66,7 +79,6 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         // Dispose of any resources that can be recreated.
     }
     
-
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         let cell = sender as! UITableViewCell
         let indexPath = tableView.indexPathForCell(cell)!
@@ -75,5 +87,9 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         movieDetailsViewController.movie = movie
     }
 
-
+    func onRefresh() {
+        self.loadData()
+        self.refreshControl.endRefreshing()
+    }
+    
 }
